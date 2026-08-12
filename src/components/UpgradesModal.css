@@ -1,0 +1,78 @@
+.upgrades-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+.upgrades-sub b {
+  color: var(--text-bright);
+}
+
+.upgrades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.upgrade-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.upgrade-card.maxed {
+  opacity: 0.6;
+}
+
+.upgrade-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.upgrade-card-top strong {
+  font-size: 13.5px;
+}
+.upgrade-level {
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.upgrade-card p {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.upgrade-tradeoff {
+  color: var(--warn) !important;
+}
+
+.upgrade-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.upgrade-cost {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.upgrade-card-footer button {
+  background: var(--immune-bg);
+  border: 1px solid var(--immune);
+  color: var(--text-bright);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.upgrade-card-footer button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

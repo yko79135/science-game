@@ -1,0 +1,223 @@
+import type { AdaptationDef, FactionId } from './types';
+
+// Adaptations are persistent upgrades bought with AP + faction resource.
+// Effects are applied by reading `state.<faction>.adaptations[id]` (the level)
+// directly inside engine/actions.ts and engine/body.ts — kept explicit rather
+// than a generic effect engine so the numbers stay easy to read and balance.
+
+export const BACTERIA_ADAPTATIONS: AdaptationDef[] = [
+  {
+    id: 'fasterReproduction',
+    faction: 'bacteria',
+    name: 'Faster Reproduction',
+    description: 'Bacteria divide more efficiently. +2 to Reproduce rolls, +1 colony strength per success.',
+    apCost: 2,
+    resourceCost: 12,
+    maxLevel: 2,
+  },
+  {
+    id: 'biofilmMastery',
+    faction: 'bacteria',
+    name: 'Biofilm Mastery',
+    description: 'Colonies protected by biofilm are much harder for immune cells to reach. +3 defense per level.',
+    apCost: 2,
+    resourceCost: 14,
+    maxLevel: 2,
+  },
+  {
+    id: 'capsule',
+    faction: 'bacteria',
+    name: 'Capsule',
+    description: 'A protective outer capsule resists phagocytosis (+2 defense) but slightly slows movement (-1 Spread).',
+    apCost: 2,
+    resourceCost: 12,
+    tradeoff: '-1 to Spread rolls',
+    maxLevel: 1,
+  },
+  {
+    id: 'toxinPotency',
+    faction: 'bacteria',
+    name: 'Toxin Potency',
+    description: 'Toxins deal more tissue damage per use, but are more easily detected by the immune system.',
+    apCost: 2,
+    resourceCost: 14,
+    tradeoff: '+detection when used',
+    maxLevel: 2,
+  },
+  {
+    id: 'improvedAdhesion',
+    faction: 'bacteria',
+    name: 'Improved Adhesion',
+    description: 'Sticky surface proteins make colonization easier. +2 to Spread rolls.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+  {
+    id: 'immuneEvasion',
+    faction: 'bacteria',
+    name: 'Immune Evasion',
+    description: 'Reduces how quickly the immune system builds detection of your colonies.',
+    apCost: 2,
+    resourceCost: 14,
+    maxLevel: 2,
+  },
+  {
+    id: 'metabolicEfficiency',
+    faction: 'bacteria',
+    name: 'Metabolic Efficiency',
+    description: 'Colonies extract more biomass from their environment each round.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+];
+
+export const VIRUS_ADAPTATIONS: AdaptationDef[] = [
+  {
+    id: 'rapidReplication',
+    faction: 'virus',
+    name: 'Rapid Replication',
+    description: '+2 virion output when replicating, but genome instability rises.',
+    apCost: 2,
+    resourceCost: 12,
+    tradeoff: '+instability',
+    maxLevel: 2,
+  },
+  {
+    id: 'receptorAdaptation',
+    faction: 'virus',
+    name: 'Receptor Adaptation',
+    description: 'Better matches host cell receptors. +2 to Infect Cell rolls.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+  {
+    id: 'immuneEvasionV',
+    faction: 'virus',
+    name: 'Immune Evasion',
+    description: 'Reduces how quickly the immune system builds detection of this virus.',
+    apCost: 2,
+    resourceCost: 14,
+    maxLevel: 2,
+  },
+  {
+    id: 'antigenicChange',
+    faction: 'virus',
+    name: 'Antigenic Change',
+    description: 'Alters surface proteins so existing antibodies are less effective.',
+    apCost: 2,
+    resourceCost: 16,
+    maxLevel: 2,
+  },
+  {
+    id: 'improvedTransmission',
+    faction: 'virus',
+    name: 'Improved Transmission',
+    description: '+2 to Spread rolls between regions.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+  {
+    id: 'latencyMastery',
+    faction: 'virus',
+    name: 'Latency Mastery',
+    description: 'Latent infections hide longer and resist detection more strongly.',
+    apCost: 2,
+    resourceCost: 14,
+    maxLevel: 1,
+  },
+  {
+    id: 'increasedInfectivity',
+    faction: 'virus',
+    name: 'Increased Infectivity',
+    description: 'Lowers the difficulty of all Infect Cell attempts by 1.',
+    apCost: 2,
+    resourceCost: 14,
+    maxLevel: 1,
+  },
+];
+
+export const IMMUNE_ADAPTATIONS: AdaptationDef[] = [
+  {
+    id: 'fasterPathogenRecognition',
+    faction: 'immune',
+    name: 'Faster Pathogen Recognition',
+    description: 'Detection accumulates faster, speeding the path to adaptive immunity.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+  {
+    id: 'strongerInnateResponse',
+    faction: 'immune',
+    name: 'Stronger Innate Response',
+    description: '+2 to Macrophage and Neutrophil attack rolls.',
+    apCost: 2,
+    resourceCost: 12,
+    maxLevel: 2,
+  },
+  {
+    id: 'cytotoxicTCells',
+    faction: 'immune',
+    name: 'Cytotoxic T Cells',
+    description: 'Unlocks/strengthens T Cell strikes on infected cells. Requires adaptive immunity vs. virus.',
+    apCost: 2,
+    resourceCost: 16,
+    requires: [],
+    maxLevel: 2,
+  },
+  {
+    id: 'antibodyProduction',
+    faction: 'immune',
+    name: 'Antibody Production',
+    description: '+2 antibody effectiveness, further reducing pathogen success rolls body-wide.',
+    apCost: 2,
+    resourceCost: 16,
+    maxLevel: 2,
+  },
+  {
+    id: 'improvedPhagocytosis',
+    faction: 'immune',
+    name: 'Improved Phagocytosis',
+    description: 'Macrophages clear more colony strength per successful attack.',
+    apCost: 1,
+    resourceCost: 12,
+    maxLevel: 2,
+  },
+  {
+    id: 'immuneMemory',
+    faction: 'immune',
+    name: 'Immune Memory',
+    description: 'Memory cells provide a stronger permanent bonus once a pathogen is cleared from a region.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+  {
+    id: 'inflammationControl',
+    faction: 'immune',
+    name: 'Inflammation Control',
+    description: 'Reduces the tissue damage caused by your own inflammation responses.',
+    apCost: 1,
+    resourceCost: 10,
+    maxLevel: 2,
+  },
+  {
+    id: 'fasterLymphocyteExpansion',
+    faction: 'immune',
+    name: 'Faster Lymphocyte Expansion',
+    description: 'Lowers the detection threshold required to unlock adaptive immunity.',
+    apCost: 2,
+    resourceCost: 14,
+    maxLevel: 1,
+  },
+];
+
+export function adaptationsFor(faction: FactionId): AdaptationDef[] {
+  if (faction === 'bacteria') return BACTERIA_ADAPTATIONS;
+  if (faction === 'virus') return VIRUS_ADAPTATIONS;
+  return IMMUNE_ADAPTATIONS;
+}

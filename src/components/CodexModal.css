@@ -1,0 +1,30 @@
+.codex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.codex-entry {
+  display: flex;
+  gap: 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.codex-entry-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.codex-entry h4 {
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+.codex-entry p {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
