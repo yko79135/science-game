@@ -73,7 +73,7 @@ export function virusValidTargets(state: GameState, actionId: string): RegionId[
   if (actionId === 'latency') return owned.filter((id) => !state.regions[id].pathogen.latent);
   if (actionId === 'infect') {
     const frontier = new Set<RegionId>();
-    for (const id of owned) {
+    for (const id of owned.filter((r) => !state.regions[r].pathogen.latent)) {
       for (const n of getNeighbors(id)) {
         if (state.regions[n].pathogen.viralLoad === 0) frontier.add(n);
       }

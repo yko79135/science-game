@@ -138,9 +138,7 @@
 .action-desc {
   font-size: 10.5px;
   color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
 }
 
 .action-costs {

@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# Infection: Battle for the Body
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A browser strategy game about bacteria, viruses, and the immune system, fought out on a stylized map of the human body. Built for classroom use (roughly grades 7–12), but designed first as a strategy game — asymmetric factions, action points, dice-based resolution, upgrades, and a body that reacts to the fight — with the biology emerging from the mechanics rather than from quizzes or trivia.
 
-Currently, two official plugins are available:
+## Playing
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Open the printed local URL. From the main menu you can start a Quick, Standard, or Scenario game, assign each faction to a human or AI player, run the interactive tutorial, or browse the Science Codex.
+
+## How it works
+
+- **Factions**: Bacteria (durable colonies, steady economy, toxins, resistance), Virus (explosive but fragile, must infect host cells to reproduce), and the Immune System (weak innate defenses early, powerful adaptive immunity once it identifies the threat).
+- **Map**: 13 connected body regions (skin, airway, lungs, bloodstream, major organs, lymph nodes, brain) with their own health, traits, and — for the intestines — a competing microbiome.
+- **Turns**: an automatic Body Phase (healing, resource generation, detection, random events) followed by each active faction's turn (3 action points to spend), then resolution and victory checks.
+- **Dice**: contested and threshold rolls with visible modifiers drive risky actions (spreading, infecting, immune attacks), while core economy actions (reproducing, replicating) are deterministic.
+- **Adaptive immunity**: the immune system accumulates "detection" against each pathogen; once it crosses a threshold, antibodies and T cells unlock — creating a race between pathogen spread and immune recognition.
+
+## Project layout
+
+- `src/engine/` — all game logic and state: map data, per-faction actions, dice, body phase, medicine/resistance, events, victory conditions, and AI. Framework-agnostic and unit-testable.
+- `src/store.ts` — a Zustand + Immer store that drives the engine, auto-plays AI/body/resolution phases, and persists to `localStorage`.
+- `src/components/` — the React UI (map, HUD, action panel, dice overlay, event log, modals, tutorial).
+- `src/data/` — static content: the Science Codex and tutorial script.
+
+## Tech
+
+React + TypeScript + Vite, Zustand for state, Immer for immutable updates. No backend — everything runs client-side with `localStorage` for save games.

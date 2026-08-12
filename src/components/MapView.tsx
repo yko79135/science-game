@@ -59,7 +59,7 @@ export default function MapView() {
 
   return (
     <div className="map-view" ref={containerRef} onMouseMove={handleMouseMove}>
-      <svg viewBox="0 0 100 110" className="map-svg" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox="0 0 100 140" className="map-svg" preserveAspectRatio="xMidYMid meet">
         <defs>
           <radialGradient id="bodyGlow" cx="50%" cy="35%" r="70%">
             <stop offset="0%" stopColor="#1c2740" />
@@ -71,15 +71,15 @@ export default function MapView() {
           </linearGradient>
         </defs>
 
-        <rect x="0" y="0" width="100" height="110" fill="url(#bodyGlow)" />
+        <rect x="0" y="0" width="100" height="140" fill="url(#bodyGlow)" />
 
         <g className="silhouette" fill="url(#silhouetteFill)" stroke="#324066" strokeWidth="0.4">
-          <circle cx="50" cy="8" r="6.5" />
-          <rect x="47" y="13" width="6" height="6" rx="2" />
-          <path d="M 32 20 Q 50 14 68 20 L 72 58 Q 50 66 28 58 Z" />
-          <rect x="18" y="20" width="9" height="34" rx="4.5" transform="rotate(8 22 20)" />
-          <rect x="73" y="20" width="9" height="34" rx="4.5" transform="rotate(-8 78 20)" />
-          <path d="M 30 58 Q 50 68 70 58 L 66 100 L 54 100 L 50 70 L 46 100 L 34 100 Z" />
+          <circle cx="50" cy="9" r="7.5" />
+          <rect x="46.5" y="16" width="7" height="7" rx="2.4" />
+          <path d="M 28 26 Q 50 18 72 26 L 77 76 Q 50 88 23 76 Z" />
+          <rect x="12" y="26" width="10" height="46" rx="5" transform="rotate(9 17 26)" />
+          <rect x="78" y="26" width="10" height="46" rx="5" transform="rotate(-9 83 26)" />
+          <path d="M 25 76 Q 50 90 75 76 L 68 138 L 53 138 L 50 96 L 47 138 L 32 138 Z" />
         </g>
 
         {connections.map(({ a, b }) => {
@@ -122,32 +122,32 @@ export default function MapView() {
               onMouseEnter={() => setHovered(id)}
               onMouseLeave={() => setHovered((h) => (h === id ? null : h))}
             >
-              {isValidTarget && <circle r="6.6" className="target-ring" />}
-              <circle r="5.6" className="health-ring-bg" />
+              {isValidTarget && <circle r="7.6" className="target-ring" />}
+              <circle r="6.5" className="health-ring-bg" />
               <circle
-                r="5.6"
+                r="6.5"
                 className="health-ring"
                 style={{
                   stroke: hc,
-                  strokeDasharray: `${(region.health / 100) * 35.2} 35.2`,
+                  strokeDasharray: `${(region.health / 100) * 40.84} 40.84`,
                 }}
               />
-              <circle r="4.6" className="node-bg" />
+              <circle r="5.4" className="node-bg" />
               {bSev !== 'clear' && (
-                <circle r="4.6" className="overlay-bacteria" style={{ opacity: SEVERITY_OPACITY[bSev] }} />
+                <circle r="5.4" className="overlay-bacteria" style={{ opacity: SEVERITY_OPACITY[bSev] }} />
               )}
               {vSev !== 'clear' && (
-                <circle r="4.6" className="overlay-virus" style={{ opacity: SEVERITY_OPACITY[vSev] }} />
+                <circle r="5.4" className="overlay-virus" style={{ opacity: SEVERITY_OPACITY[vSev] }} />
               )}
-              <text textAnchor="middle" dy="1.6" className="region-icon">
+              <text textAnchor="middle" dy="1.9" className="region-icon">
                 {def.icon}
               </text>
-              {region.pathogen.biofilm && <text x="3.6" y="-3" className="badge">🛡️</text>}
-              {region.pathogen.quarantined && <text x="-4.6" y="-3" className="badge">🚧</text>}
-              {region.pathogen.latent && <text x="3.6" y="4.8" className="badge">💤</text>}
-              {region.pathogen.antibodiesPresent && <text x="-4.6" y="4.8" className="badge">🔷</text>}
-              {region.health < 35 && <circle r="6.6" className="critical-pulse" />}
-              <text textAnchor="middle" y="8" className="region-label">
+              {region.pathogen.biofilm && <text x="4.2" y="-3.4" className="badge">🛡️</text>}
+              {region.pathogen.quarantined && <text x="-5.4" y="-3.4" className="badge">🚧</text>}
+              {region.pathogen.latent && <text x="4.2" y="5.6" className="badge">💤</text>}
+              {region.pathogen.antibodiesPresent && <text x="-5.4" y="5.6" className="badge">🔷</text>}
+              {region.health < 35 && <circle r="7.6" className="critical-pulse" />}
+              <text textAnchor="middle" y="9.6" className="region-label">
                 {def.name}
               </text>
             </g>

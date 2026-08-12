@@ -121,8 +121,8 @@ function innateAttack(
 ): void {
   const region = state.regions[regionId];
   const def = REGIONS[regionId];
-  const targetsBacteria = region.pathogen.colonyStrength > 0;
-  const targetsVirus = region.pathogen.viralLoad > 0;
+  const targetsBacteria = region.pathogen.colonyStrength >= region.pathogen.viralLoad && region.pathogen.colonyStrength > 0;
+  const targetsVirus = !targetsBacteria && region.pathogen.viralLoad > 0;
   const attackerMods = [
     { label: 'Innate strength', value: baseBonus },
     { label: 'Region immune bonus', value: def.traits.immuneBonus ?? 0 },

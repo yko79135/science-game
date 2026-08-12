@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { produce } from 'immer';
+import { produce, enableMapSet } from 'immer';
+
+enableMapSet();
 import { createInitialState } from './engine/state';
 import { getScenario } from './engine/scenarios';
 import { runBodyPhase, nextPhaseAfter } from './engine/body';

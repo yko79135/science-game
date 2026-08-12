@@ -1,7 +1,6 @@
 .map-view {
-  position: relative;
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -62,24 +61,31 @@
 }
 
 .region-icon {
-  font-size: 4.2px;
+  font-size: 5.2px;
   pointer-events: none;
 }
 
 .region-label {
-  font-size: 2.5px;
+  font-size: 3px;
   fill: var(--text-dim);
   pointer-events: none;
-  font-weight: 600;
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  paint-order: stroke;
+  stroke: #090c14;
+  stroke-width: 2px;
 }
 
 .region-node:hover .region-label,
-.region-node.selected .region-label {
+.region-node.selected .region-label,
+.region-node.valid-target .region-label {
+  opacity: 1;
   fill: var(--text-bright);
 }
 
 .badge {
-  font-size: 3px;
+  font-size: 3.6px;
   pointer-events: none;
 }
 
