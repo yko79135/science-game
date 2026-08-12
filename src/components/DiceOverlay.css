@@ -1,0 +1,103 @@
+.dice-overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+  animation: dice-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes dice-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.dice-card {
+  background: #0c1018f2;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 20px;
+  min-width: 220px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
+.dice-card-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.dice-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-bright);
+  animation: dice-roll 0.5s ease-out;
+}
+
+@keyframes dice-roll {
+  0% {
+    transform: rotate(-15deg) scale(0.7);
+  }
+  60% {
+    transform: rotate(8deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+.dice-mod {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.dice-total {
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 4px;
+  color: var(--text-bright);
+}
+
+.dice-outcome {
+  margin-top: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.6px;
+}
+.dice-outcome.success,
+.dice-face.success .dice-outcome {
+  color: var(--good);
+}
+.dice-outcome.fail,
+.dice-face.fail .dice-outcome {
+  color: var(--danger);
+}
+
+.contest-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0;
+}
+.contest-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.contest-vs {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 700;
+}

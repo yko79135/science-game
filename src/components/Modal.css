@@ -1,0 +1,100 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 12, 0.72);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: modal-fade-in 0.15s ease;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  animation: modal-pop-in 0.2s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+}
+
+.modal-close {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+.modal-close:hover {
+  border-color: var(--text-dim);
+}
+
+.modal-body {
+  padding: 20px 22px;
+  overflow-y: auto;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.modal-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 10px 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+}
+.modal-tab.active {
+  color: var(--text-bright);
+  border-bottom-color: var(--immune);
+}

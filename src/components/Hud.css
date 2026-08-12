@@ -1,0 +1,86 @@
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 18px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.hud-left,
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-right {
+  margin-left: auto;
+}
+
+.hud-icon-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hud-icon-btn:hover {
+  border-color: var(--text-dim);
+}
+
+.hud-round {
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.hud-round b {
+  color: var(--text-bright);
+}
+
+.hud-phase {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.hud-body-health {
+  flex: 1;
+  max-width: 260px;
+  min-width: 140px;
+}
+
+.hbh-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+.hbh-bar-bg {
+  height: 8px;
+  border-radius: 5px;
+  background: var(--bg-raised);
+  overflow: hidden;
+}
+.hbh-bar-fill {
+  height: 100%;
+  transition: width 0.6s ease, background 0.6s ease;
+}
+
+.hud-vitals {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
