@@ -1,15 +1,20 @@
-import type { GameState, ScenarioDef } from './types';
+import { capitalHexesOf } from './hexGrid';
+import type { GameState, RegionId, ScenarioDef } from './types';
 
-function seedBacteria(state: GameState, regionId: 'skin' | 'intestines', amount: number) {
-  const region = state.regions[regionId];
-  region.pathogen.colonyStrength = amount;
+function seedBacteria(state: GameState, regionId: RegionId, amount: number) {
+  const hexId = capitalHexesOf(regionId)[0];
+  if (!hexId) return;
+  const hex = state.hexes[hexId];
+  hex.pathogen.colonyStrength = amount;
   state.bacteria.totalColonyStrength += amount;
   state.stats.regionsEverInfected.add(regionId);
 }
 
-function seedVirus(state: GameState, regionId: 'nose' | 'throat', amount: number) {
-  const region = state.regions[regionId];
-  region.pathogen.viralLoad = amount;
+function seedVirus(state: GameState, regionId: RegionId, amount: number) {
+  const hexId = capitalHexesOf(regionId)[0];
+  if (!hexId) return;
+  const hex = state.hexes[hexId];
+  hex.pathogen.viralLoad = amount;
   state.virus.totalViralLoad += amount;
   state.stats.regionsEverInfected.add(regionId);
 }

@@ -1,6 +1,7 @@
 import { useGameStore } from '../store';
 import { FACTION_META } from '../data/factionMeta';
-import { MAJOR_ORGANS, REGION_ORDER } from '../engine/regions';
+import { MAJOR_ORGANS } from '../engine/regions';
+import { aggregateRegion, distinctRegionsControlled } from '../engine/aggregate';
 import type { GameState } from '../engine/types';
 import './Modal.css';
 import './EndGameScreen.css';
@@ -43,8 +44,8 @@ export default function EndGameScreen() {
   const goToMenu = useGameStore((s) => s.goToMenu);
   const { text, color } = title(game);
 
-  const infectedMajorOrgans = MAJOR_ORGANS.filter((id) => game.regions[id].pathogen.colonyStrength > 0).length;
-  const infectedRegionsNow = REGION_ORDER.filter((id) => game.regions[id].pathogen.viralLoad > 0).length;
+  const infectedMajorOrgans = MAJOR_ORGANS.filter((id) => aggregateRegion(game, id).hexesWithColony > 0).length;
+  const infectedRegionsNow = distinctRegionsControlled(game, 'virus');
 
   return (
     <div className="modal-backdrop">
@@ -68,6 +69,14 @@ export default function EndGameScreen() {
           <div className="stat-box" style={{ color: 'var(--virus)' }}>
             <span>Peak Viral Load</span>
             <b>{game.stats.peakViralLoad}</b>
+          </div>
+          <div className="stat-box" style={{ color: 'var(--bacteria)' }}>
+            <span>Peak Hex Tiles Controlled (Bacteria)</span>
+            <b>{game.stats.peakHexesControlled.bacteria}</b>
+          </div>
+          <div className="stat-box" style={{ color: 'var(--virus)' }}>
+            <span>Peak Hex Tiles Controlled (Virus)</span>
+            <b>{game.stats.peakHexesControlled.virus}</b>
           </div>
           <div className="stat-box" style={{ color: 'var(--immune)' }}>
             <span>Antibodies Produced</span>

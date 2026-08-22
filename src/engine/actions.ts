@@ -1,4 +1,4 @@
-import type { FactionId, GameState, RegionId } from './types';
+import type { FactionId, GameState, HexId } from './types';
 import type { ActionDef, ActionOutcome, FactionActionModule } from './actionTypes';
 import { bacteriaModule } from './bacteriaActions';
 import { virusModule } from './virusActions';
@@ -18,7 +18,7 @@ export function getActionDef(faction: FactionId, actionId: string): ActionDef | 
   return MODULES[faction].catalog.find((a) => a.id === actionId);
 }
 
-export function getValidTargets(state: GameState, faction: FactionId, actionId: string): RegionId[] {
+export function getValidTargets(state: GameState, faction: FactionId, actionId: string): HexId[] {
   return MODULES[faction].getValidTargets(state, actionId);
 }
 
@@ -26,12 +26,12 @@ export function executeAction(
   state: GameState,
   faction: FactionId,
   actionId: string,
-  regionId: RegionId | null,
+  hexId: HexId | null,
 ): ActionOutcome {
   const def = getActionDef(faction, actionId);
   if (!def) return { ok: false, message: 'Unknown action.' };
   if (state.ap[faction] < def.apCost) return { ok: false, message: 'Not enough action points.' };
-  const result = MODULES[faction].execute(state, actionId, regionId);
+  const result = MODULES[faction].execute(state, actionId, hexId);
   if (result.ok) {
     state.ap[faction] -= def.apCost;
   }

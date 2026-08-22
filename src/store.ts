@@ -11,7 +11,7 @@ import { buyAdaptation } from './engine/adaptationSystem';
 import { adaptationsFor } from './engine/adaptations';
 import { runAiTurn } from './engine/ai';
 import { saveGame, loadGame, clearSavedGame } from './engine/persistence';
-import type { FactionId, GameSettings, GameState, RegionId } from './engine/types';
+import type { FactionId, GameSettings, GameState, HexId } from './engine/types';
 
 type View = 'menu' | 'playing';
 
@@ -19,7 +19,7 @@ interface StoreState {
   view: View;
   game: GameState | null;
   tutorialActive: boolean;
-  selectedRegion: RegionId | null;
+  selectedHex: HexId | null;
   selectedAction: string | null;
   toast: string | null;
   codexOpen: boolean;
@@ -32,9 +32,9 @@ interface StoreState {
   startTutorial: () => void;
   exitTutorial: () => void;
 
-  selectRegion: (id: RegionId | null) => void;
+  selectHex: (id: HexId | null) => void;
   selectAction: (id: string | null) => void;
-  performAction: (actionId: string, regionId: RegionId | null) => void;
+  performAction: (actionId: string, hexId: HexId | null) => void;
   buyUpgrade: (adaptationId: string) => void;
   endHumanTurn: () => void;
   setCodexOpen: (open: boolean) => void;
@@ -73,7 +73,7 @@ export const useGameStore = create<StoreState>((set, get) => {
           g.phase = nextPhaseAfter(g);
         }
         draft.selectedAction = null;
-        draft.selectedRegion = null;
+        draft.selectedHex = null;
       }),
     );
 
@@ -95,7 +95,7 @@ export const useGameStore = create<StoreState>((set, get) => {
     view: 'menu',
     game: null,
     tutorialActive: false,
-    selectedRegion: null,
+    selectedHex: null,
     selectedAction: null,
     toast: null,
     codexOpen: false,
@@ -107,14 +107,14 @@ export const useGameStore = create<StoreState>((set, get) => {
       const scenario = getScenario(settings.scenarioId);
       scenario.seed(state);
       clearSavedGame();
-      set({ view: 'playing', game: state, tutorialActive: false, selectedRegion: null, selectedAction: null, toast: null });
+      set({ view: 'playing', game: state, tutorialActive: false, selectedHex: null, selectedAction: null, toast: null });
       stepAdvance();
     },
 
     continueSavedGame: () => {
       const saved = loadGame();
       if (!saved) return;
-      set({ view: 'playing', game: saved, tutorialActive: false, selectedRegion: null, selectedAction: null, toast: null });
+      set({ view: 'playing', game: saved, tutorialActive: false, selectedHex: null, selectedAction: null, toast: null });
       stepAdvance();
     },
 
@@ -132,20 +132,20 @@ export const useGameStore = create<StoreState>((set, get) => {
       };
       const state = createInitialState(settings);
       getScenario('skinWound').seed(state);
-      set({ view: 'playing', game: state, tutorialActive: true, selectedRegion: null, selectedAction: null, toast: null });
+      set({ view: 'playing', game: state, tutorialActive: true, selectedHex: null, selectedAction: null, toast: null });
       stepAdvance();
     },
     exitTutorial: () => set({ view: 'menu', game: null, tutorialActive: false }),
 
-    selectRegion: (id) => set({ selectedRegion: id }),
-    selectAction: (id) => set((s) => ({ selectedAction: id, selectedRegion: id ? s.selectedRegion : null })),
+    selectHex: (id) => set({ selectedHex: id }),
+    selectAction: (id) => set((s) => ({ selectedAction: id, selectedHex: id ? s.selectedHex : null })),
 
-    performAction: (actionId, regionId) => {
+    performAction: (actionId, hexId) => {
       set(
         produce((draft: StoreState) => {
           const g = draft.game!;
           const faction = g.phase as FactionId;
-          const result = executeAction(g, faction, actionId, regionId);
+          const result = executeAction(g, faction, actionId, hexId);
           draft.toast = result.ok ? null : result.message ?? 'Action failed.';
           if (result.ok) {
             draft.selectedAction = null;
@@ -188,7 +188,7 @@ export const useGameStore = create<StoreState>((set, get) => {
           g.ap[faction] = 0;
           g.phase = nextPhaseAfter(g);
           draft.selectedAction = null;
-          draft.selectedRegion = null;
+          draft.selectedHex = null;
         }),
       );
       const ns = get().game;

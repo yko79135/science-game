@@ -1,10 +1,12 @@
-import { REGIONS, REGION_ORDER } from './regions';
-import type { GameSettings, GameState, RegionState } from './types';
+import { HEX_TILES } from './hexGrid';
+import { REGIONS } from './regions';
+import type { GameSettings, GameState, HexState } from './types';
 
-function freshRegionState(id: (typeof REGION_ORDER)[number]): RegionState {
-  const def = REGIONS[id];
+function freshHexState(id: string, regionId: (typeof HEX_TILES)[number]['regionId']): HexState {
+  const def = REGIONS[regionId];
   return {
     id,
+    regionId,
     health: 100,
     microbiome: def.traits.microbiome ?? 0,
     pathogen: {
@@ -21,16 +23,16 @@ function freshRegionState(id: (typeof REGION_ORDER)[number]): RegionState {
 }
 
 export function createInitialState(settings: GameSettings): GameState {
-  const regions = {} as GameState['regions'];
-  for (const id of REGION_ORDER) {
-    regions[id] = freshRegionState(id);
+  const hexes = {} as GameState['hexes'];
+  for (const tile of HEX_TILES) {
+    hexes[tile.id] = freshHexState(tile.id, tile.regionId);
   }
 
   return {
     settings,
     round: 1,
     phase: 'body',
-    regions,
+    hexes,
     bacteria: {
       biomass: 10,
       totalColonyStrength: 0,
@@ -68,6 +70,7 @@ export function createInitialState(settings: GameSettings): GameState {
     stats: {
       peakViralLoad: 0,
       peakColonyStrength: 0,
+      peakHexesControlled: { bacteria: 0, virus: 0 },
       regionsEverInfected: new Set(),
       adaptiveActivatedRound: {},
       antibodiesProduced: 0,
@@ -76,7 +79,6 @@ export function createInitialState(settings: GameSettings): GameState {
       startRound: 1,
       transmissionBonus: 0,
     },
-    selectedRegion: null,
-    pendingEnd: false,
+    selectedHex: null,
   };
 }

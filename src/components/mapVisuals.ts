@@ -1,20 +1,23 @@
-import type { RegionState } from '../engine/types';
+import { BAL } from '../engine/balance';
+import type { HexState } from '../engine/types';
 
 export type InfectionSeverity = 'clear' | 'mild' | 'moderate' | 'severe';
 
-export function bacteriaSeverity(region: RegionState): InfectionSeverity {
-  const c = region.pathogen.colonyStrength;
+export function bacteriaSeverity(hex: HexState): InfectionSeverity {
+  const c = hex.pathogen.colonyStrength;
+  const cap = BAL.bacteria.hexCap;
   if (c <= 0) return 'clear';
-  if (c < 5) return 'mild';
-  if (c < 12) return 'moderate';
+  if (c < cap * 0.3) return 'mild';
+  if (c < cap * 0.7) return 'moderate';
   return 'severe';
 }
 
-export function virusSeverity(region: RegionState): InfectionSeverity {
-  const v = region.pathogen.viralLoad;
+export function virusSeverity(hex: HexState): InfectionSeverity {
+  const v = hex.pathogen.viralLoad;
+  const cap = BAL.virus.hexCap;
   if (v <= 0) return 'clear';
-  if (v < 5) return 'mild';
-  if (v < 12) return 'moderate';
+  if (v < cap * 0.3) return 'mild';
+  if (v < cap * 0.7) return 'moderate';
   return 'severe';
 }
 
@@ -24,10 +27,18 @@ export function healthColor(health: number): string {
   return '#ff5d5d';
 }
 
-export function dominantColor(region: RegionState): string | null {
-  const bSev = bacteriaSeverity(region);
-  const vSev = virusSeverity(region);
-  if (bSev === 'clear' && vSev === 'clear') return null;
-  if (bSev !== 'clear' && vSev !== 'clear') return 'mixed';
-  return bSev !== 'clear' ? 'bacteria' : 'virus';
-}
+export const REGION_TINTS: Record<string, string> = {
+  skin: '#3a4a63',
+  nose: '#3a5a63',
+  throat: '#3a5563',
+  lungs: '#3a5a58',
+  bloodstream: '#5a3a3f',
+  heart: '#5a3a3a',
+  liver: '#5a4a3a',
+  stomach: '#4a5a3a',
+  intestines: '#4a4a3a',
+  kidneys: '#3a4a4a',
+  lymphNodes: '#3a3f5a',
+  spleen: '#4a3a5a',
+  brain: '#4a3a55',
+};

@@ -116,7 +116,7 @@ export default function ActionPanel() {
 
       {selectedAction && (
         <div className="ap-target-hint">
-          🎯 Select a highlighted region on the map…
+          🎯 Select a highlighted tile on the map…
           <button className="cancel-btn" onClick={() => selectAction(null)}>
             Cancel
           </button>
