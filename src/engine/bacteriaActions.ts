@@ -1,6 +1,7 @@
 import { BAL } from './balance';
-import { getNeighbors, REGIONS } from './regions';
-import type { GameState, RegionId } from './types';
+import { REGIONS } from './regions';
+import { neighborsOf } from './hexGrid';
+import type { GameState, HexId } from './types';
 import type { ActionDef, ActionOutcome, FactionActionModule } from './actionTypes';
 import { addLog, clampHealth } from './log';
 import { performRoll } from './dice';
@@ -26,7 +27,7 @@ export const BACTERIA_CATALOG: ActionDef[] = [
     apCost: 1,
     resourceCost: BAL.bacteria.spreadBiomassCost,
     needsTarget: true,
-    description: 'Attempt to colonize an adjacent, unclaimed region. Chance-based.',
+    description: 'Attempt to colonize an adjacent, unclaimed tissue tile. Chance-based.',
   },
   {
     id: 'biofilm',
@@ -66,27 +67,30 @@ export const BACTERIA_CATALOG: ActionDef[] = [
     apCost: 1,
     resourceCost: BAL.bacteria.hideBiomassCost,
     needsTarget: true,
-    description: 'Reduce how visible a colony is to immune surveillance.',
+    description: 'Reduce how visible a colony tile is to immune surveillance.',
   },
 ];
 
-function ownedRegions(state: GameState): RegionId[] {
-  return (Object.keys(state.regions) as RegionId[]).filter((id) => state.regions[id].pathogen.colonyStrength > 0);
+function ownedHexes(state: GameState): HexId[] {
+  return Object.keys(state.hexes).filter((id) => state.hexes[id].pathogen.colonyStrength > 0);
 }
 
-export function bacteriaValidTargets(state: GameState, actionId: string): RegionId[] {
-  const owned = ownedRegions(state);
-  if (actionId === 'reproduce' || actionId === 'toxin' || actionId === 'hide') {
+export function bacteriaValidTargets(state: GameState, actionId: string): HexId[] {
+  const owned = ownedHexes(state);
+  if (actionId === 'toxin' || actionId === 'hide') {
     return owned;
   }
+  if (actionId === 'reproduce') {
+    return owned.filter((id) => state.hexes[id].pathogen.colonyStrength < BAL.bacteria.hexCap);
+  }
   if (actionId === 'biofilm') {
-    return owned.filter((id) => !state.regions[id].pathogen.biofilm);
+    return owned.filter((id) => !state.hexes[id].pathogen.biofilm);
   }
   if (actionId === 'spread') {
-    const frontier = new Set<RegionId>();
+    const frontier = new Set<HexId>();
     for (const id of owned) {
-      for (const n of getNeighbors(id)) {
-        if (state.regions[n].pathogen.colonyStrength === 0) frontier.add(n);
+      for (const n of neighborsOf(id)) {
+        if (state.hexes[n].pathogen.colonyStrength === 0) frontier.add(n);
       }
     }
     return Array.from(frontier);
@@ -100,30 +104,31 @@ function spendBiomass(state: GameState, amount: number): boolean {
   return true;
 }
 
-export function bacteriaExecute(state: GameState, actionId: string, regionId: RegionId | null): ActionOutcome {
+export function bacteriaExecute(state: GameState, actionId: string, hexId: HexId | null): ActionOutcome {
   const b = state.bacteria;
   const lvl = (id: string) => b.adaptations[id] ?? 0;
 
   if (actionId === 'reproduce') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
     if (!spendBiomass(state, BAL.bacteria.reproduceBiomassCost)) return { ok: false, message: 'Not enough biomass.' };
-    const region = state.regions[regionId];
-    const def = REGIONS[regionId];
+    const hex = state.hexes[hexId];
+    const def = REGIONS[hex.regionId];
     let gain = BAL.bacteria.reproduceGain + (def.traits.bacteriaGrowthBonus ?? 0) + lvl('fasterReproduction') * 2;
-    gain -= Math.floor(region.microbiome / 25);
-    gain -= Math.floor(region.pathogen.inflammation / 30);
+    gain -= Math.floor(hex.microbiome / 25);
+    gain -= Math.floor(hex.pathogen.inflammation / 30);
     gain = Math.max(1, Math.round(gain * feverMultiplier(state)));
-    region.pathogen.colonyStrength += gain;
+    gain = Math.min(gain, BAL.bacteria.hexCap - hex.pathogen.colonyStrength);
+    hex.pathogen.colonyStrength += gain;
     b.totalColonyStrength += gain;
     addLog(state, 'bacteria', '🦠', `Bacteria reproduced in ${def.name} (+${gain} colony strength).`);
     return { ok: true };
   }
 
   if (actionId === 'spread') {
-    if (!regionId) return { ok: false, message: 'Select a target region.' };
+    if (!hexId) return { ok: false, message: 'Select a target hex.' };
     if (!spendBiomass(state, BAL.bacteria.spreadBiomassCost)) return { ok: false, message: 'Not enough biomass.' };
-    const target = state.regions[regionId];
-    const def = REGIONS[regionId];
+    const target = state.hexes[hexId];
+    const def = REGIONS[target.regionId];
     const modifiers = [
       { label: 'Adhesion', value: lvl('improvedAdhesion') * 2 },
       { label: 'Capsule (slower)', value: lvl('capsule') ? -1 : 0 },
@@ -138,9 +143,10 @@ export function bacteriaExecute(state: GameState, actionId: string, regionId: Re
     const result = performRoll({ label: `Spread to ${def.name}`, modifiers, threshold: BAL.bacteria.spreadThreshold });
     state.lastRoll = { type: 'check', id: result.id, dice: result };
     if (result.success) {
-      target.pathogen.colonyStrength += BAL.bacteria.spreadGain + lvl('improvedAdhesion');
-      b.totalColonyStrength += BAL.bacteria.spreadGain + lvl('improvedAdhesion');
-      state.stats.regionsEverInfected.add(regionId);
+      const gain = Math.min(BAL.bacteria.spreadGain + lvl('improvedAdhesion'), BAL.bacteria.hexCap);
+      target.pathogen.colonyStrength += gain;
+      b.totalColonyStrength += gain;
+      state.stats.regionsEverInfected.add(target.regionId);
       addLog(state, 'bacteria', '🦠', `Bacteria successfully spread into ${def.name}.`);
     } else {
       b.biomass = Math.max(0, b.biomass - BAL.bacteria.spreadFailBiomassCost);
@@ -150,22 +156,22 @@ export function bacteriaExecute(state: GameState, actionId: string, regionId: Re
   }
 
   if (actionId === 'biofilm') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
     if (!spendBiomass(state, BAL.bacteria.biofilmBiomassCost)) return { ok: false, message: 'Not enough biomass.' };
-    state.regions[regionId].pathogen.biofilm = true;
-    addLog(state, 'bacteria', '🛡️', `Biofilm formed in ${REGIONS[regionId].name}, boosting colony defense.`);
+    state.hexes[hexId].pathogen.biofilm = true;
+    addLog(state, 'bacteria', '🛡️', `Biofilm formed in ${REGIONS[state.hexes[hexId].regionId].name}, boosting colony defense.`);
     return { ok: true };
   }
 
   if (actionId === 'toxin') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
     if (!spendBiomass(state, 6)) return { ok: false, message: 'Not enough biomass.' };
-    const region = state.regions[regionId];
-    const def = REGIONS[regionId];
+    const hex = state.hexes[hexId];
+    const def = REGIONS[hex.regionId];
     const dmg = BAL.bacteria.toxinDamage + lvl('toxinPotency') * 3;
-    region.health = clampHealth(region.health - dmg);
+    hex.health = clampHealth(hex.health - dmg);
     const det = BAL.bacteria.toxinDetection + lvl('toxinPotency') * 4;
-    gainDetection(state, regionId, det, 'bacteria');
+    gainDetection(state, hexId, det, 'bacteria');
     b.toxinLevel += 1;
     addLog(state, 'bacteria', '☠️', `Toxins released in ${def.name}: -${dmg} tissue health, detection rising.`);
     return { ok: true };
@@ -179,10 +185,10 @@ export function bacteriaExecute(state: GameState, actionId: string, regionId: Re
   }
 
   if (actionId === 'hide') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
     if (!spendBiomass(state, BAL.bacteria.hideBiomassCost)) return { ok: false, message: 'Not enough biomass.' };
-    reduceDetection(state, regionId, BAL.bacteria.hideDetectionReduction + lvl('immuneEvasion') * 5);
-    addLog(state, 'bacteria', '🫥', `Bacteria in ${REGIONS[regionId].name} reduce their visibility to immune surveillance.`);
+    reduceDetection(state, hexId, BAL.bacteria.hideDetectionReduction + lvl('immuneEvasion') * 5);
+    addLog(state, 'bacteria', '🫥', `Bacteria in ${REGIONS[state.hexes[hexId].regionId].name} reduce their visibility to immune surveillance.`);
     return { ok: true };
   }
 

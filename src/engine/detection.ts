@@ -1,16 +1,16 @@
 import { BAL } from './balance';
-import type { FactionId, GameState, RegionId } from './types';
+import type { FactionId, GameState, HexId } from './types';
 import { addLog } from './log';
 
 export function gainDetection(
   state: GameState,
-  regionId: RegionId,
+  hexId: HexId,
   amount: number,
   pathogen: 'bacteria' | 'virus',
 ) {
   if (amount <= 0) return;
-  const region = state.regions[regionId];
-  region.pathogen.detection = Math.min(100, region.pathogen.detection + amount);
+  const hex = state.hexes[hexId];
+  hex.pathogen.detection = Math.min(100, hex.pathogen.detection + amount);
   const recognitionLevel = state.immune.adaptations.fasterPathogenRecognition ?? 0;
   const globalMultiplier = 0.4 + recognitionLevel * 0.15;
   const globalGain = amount * globalMultiplier;
@@ -21,9 +21,9 @@ export function gainDetection(
   }
 }
 
-export function reduceDetection(state: GameState, regionId: RegionId, amount: number) {
-  const region = state.regions[regionId];
-  region.pathogen.detection = Math.max(0, region.pathogen.detection - amount);
+export function reduceDetection(state: GameState, hexId: HexId, amount: number) {
+  const hex = state.hexes[hexId];
+  hex.pathogen.detection = Math.max(0, hex.pathogen.detection - amount);
 }
 
 export function checkAdaptiveUnlock(state: GameState, faction: 'bacteria' | 'virus') {

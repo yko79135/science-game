@@ -1,6 +1,5 @@
 import type { GameState } from './types';
 import { addLog } from './log';
-import { REGION_ORDER } from './regions';
 
 export function applyAntibiotic(state: GameState) {
   const b = state.bacteria;
@@ -8,16 +7,16 @@ export function applyAntibiotic(state: GameState) {
   let totalSurvived = 0;
   let preResistant = 0;
   let preTotal = 0;
-  for (const id of REGION_ORDER) {
-    const region = state.regions[id];
-    const total = region.pathogen.colonyStrength;
+  for (const id in state.hexes) {
+    const hex = state.hexes[id];
+    const total = hex.pathogen.colonyStrength;
     if (total <= 0) continue;
     const resistantCount = Math.round(total * (b.resistance / 100));
     const susceptibleCount = total - resistantCount;
     const destroyed = Math.round(susceptibleCount * 0.8);
-    region.pathogen.colonyStrength = Math.max(0, total - destroyed);
+    hex.pathogen.colonyStrength = Math.max(0, total - destroyed);
     totalDestroyed += destroyed;
-    totalSurvived += region.pathogen.colonyStrength;
+    totalSurvived += hex.pathogen.colonyStrength;
     preResistant += resistantCount;
     preTotal += total;
   }

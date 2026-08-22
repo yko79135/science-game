@@ -1,6 +1,7 @@
 import { BAL } from './balance';
-import { getNeighbors, REGIONS } from './regions';
-import type { GameState, RegionId } from './types';
+import { REGIONS } from './regions';
+import { neighborsOf } from './hexGrid';
+import type { GameState, HexId } from './types';
 import type { ActionDef, ActionOutcome, FactionActionModule } from './actionTypes';
 import { addLog, clampHealth } from './log';
 import { performRoll } from './dice';
@@ -16,7 +17,7 @@ export const VIRUS_CATALOG: ActionDef[] = [
     apCost: 1,
     resourceCost: BAL.virus.infectVirionCost,
     needsTarget: true,
-    description: 'Attempt to infect host cells in an adjacent region. Chance-based.',
+    description: 'Attempt to infect host cells in an adjacent tissue tile. Chance-based.',
   },
   {
     id: 'replicate',
@@ -46,7 +47,7 @@ export const VIRUS_CATALOG: ActionDef[] = [
     apCost: BAL.virus.latencyApCost,
     resourceCost: 0,
     needsTarget: true,
-    description: 'Go dormant in this region, hiding from detection but pausing replication.',
+    description: 'Go dormant in this tile, hiding from detection but pausing replication.',
   },
   {
     id: 'evade',
@@ -56,26 +57,26 @@ export const VIRUS_CATALOG: ActionDef[] = [
     apCost: 1,
     resourceCost: BAL.virus.evadeVirionCost,
     needsTarget: true,
-    description: 'Reduce how visible this infection is to the immune system.',
+    description: 'Reduce how visible this infection tile is to the immune system.',
   },
 ];
 
-function ownedRegions(state: GameState): RegionId[] {
-  return (Object.keys(state.regions) as RegionId[]).filter((id) => state.regions[id].pathogen.viralLoad > 0);
+function ownedHexes(state: GameState): HexId[] {
+  return Object.keys(state.hexes).filter((id) => state.hexes[id].pathogen.viralLoad > 0);
 }
 
-export function virusValidTargets(state: GameState, actionId: string): RegionId[] {
-  const owned = ownedRegions(state);
+export function virusValidTargets(state: GameState, actionId: string): HexId[] {
+  const owned = ownedHexes(state);
   if (actionId === 'replicate' || actionId === 'evade') {
-    return owned.filter((id) => !state.regions[id].pathogen.latent);
+    return owned.filter((id) => !state.hexes[id].pathogen.latent);
   }
   if (actionId === 'burst') return owned;
-  if (actionId === 'latency') return owned.filter((id) => !state.regions[id].pathogen.latent);
+  if (actionId === 'latency') return owned.filter((id) => !state.hexes[id].pathogen.latent);
   if (actionId === 'infect') {
-    const frontier = new Set<RegionId>();
-    for (const id of owned.filter((r) => !state.regions[r].pathogen.latent)) {
-      for (const n of getNeighbors(id)) {
-        if (state.regions[n].pathogen.viralLoad === 0) frontier.add(n);
+    const frontier = new Set<HexId>();
+    for (const id of owned.filter((r) => !state.hexes[r].pathogen.latent)) {
+      for (const n of neighborsOf(id)) {
+        if (state.hexes[n].pathogen.viralLoad === 0) frontier.add(n);
       }
     }
     return Array.from(frontier);
@@ -89,15 +90,15 @@ function spendVirions(state: GameState, amount: number): boolean {
   return true;
 }
 
-export function virusExecute(state: GameState, actionId: string, regionId: RegionId | null): ActionOutcome {
+export function virusExecute(state: GameState, actionId: string, hexId: HexId | null): ActionOutcome {
   const v = state.virus;
   const lvl = (id: string) => v.adaptations[id] ?? 0;
 
   if (actionId === 'infect') {
-    if (!regionId) return { ok: false, message: 'Select a target region.' };
+    if (!hexId) return { ok: false, message: 'Select a target hex.' };
     if (!spendVirions(state, BAL.virus.infectVirionCost)) return { ok: false, message: 'Not enough virions.' };
-    const target = state.regions[regionId];
-    const def = REGIONS[regionId];
+    const target = state.hexes[hexId];
+    const def = REGIONS[target.regionId];
     const modifiers = [
       { label: 'Receptor adaptation', value: lvl('receptorAdaptation') * 2 },
       { label: 'Increased infectivity', value: lvl('increasedInfectivity') ? 2 : 0 },
@@ -113,9 +114,10 @@ export function virusExecute(state: GameState, actionId: string, regionId: Regio
     const result = performRoll({ label: `Infect ${def.name}`, modifiers, threshold: BAL.virus.infectThreshold });
     state.lastRoll = { type: 'check', id: result.id, dice: result };
     if (result.success) {
-      target.pathogen.viralLoad += BAL.virus.infectGain;
-      v.totalViralLoad += BAL.virus.infectGain;
-      state.stats.regionsEverInfected.add(regionId);
+      const gain = Math.min(BAL.virus.infectGain, BAL.virus.hexCap);
+      target.pathogen.viralLoad += gain;
+      v.totalViralLoad += gain;
+      state.stats.regionsEverInfected.add(target.regionId);
       addLog(state, 'virus', '🧫', `The virus successfully infected cells in ${def.name}.`);
     } else {
       v.virions = Math.max(0, v.virions - BAL.virus.infectFailVirionCost);
@@ -125,49 +127,50 @@ export function virusExecute(state: GameState, actionId: string, regionId: Regio
   }
 
   if (actionId === 'replicate') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
-    const region = state.regions[regionId];
-    const def = REGIONS[regionId];
-    if (region.pathogen.latent) return { ok: false, message: 'This region is latent — reactivate first.' };
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
+    const hex = state.hexes[hexId];
+    const def = REGIONS[hex.regionId];
+    if (hex.pathogen.latent) return { ok: false, message: 'This tile is latent — reactivate first.' };
     const rawGain = BAL.virus.replicateGain + (def.traits.virusReplicationBonus ?? 0) + lvl('rapidReplication') * 2;
-    const gain = Math.max(1, Math.round(rawGain * feverMultiplier(state) * antiviralMultiplier(state)));
-    region.pathogen.viralLoad += gain;
+    let gain = Math.max(1, Math.round(rawGain * feverMultiplier(state) * antiviralMultiplier(state)));
+    gain = Math.min(gain, Math.max(0, BAL.virus.hexCap - hex.pathogen.viralLoad));
+    hex.pathogen.viralLoad += gain;
     v.totalViralLoad += gain;
     v.virions += gain;
     const dmg = BAL.virus.replicateSelfDamage + lvl('rapidReplication');
-    region.health = clampHealth(region.health - dmg);
+    hex.health = clampHealth(hex.health - dmg);
     if (lvl('rapidReplication')) v.mutationInstability = Math.min(100, v.mutationInstability + 3);
     addLog(state, 'virus', '🔁', `Virus replicated in ${def.name} (+${gain} viral load, tissue -${dmg}).`);
     return { ok: true };
   }
 
   if (actionId === 'burst') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
-    const region = state.regions[regionId];
-    const def = REGIONS[regionId];
-    const consumed = Math.max(1, Math.round(region.pathogen.viralLoad * BAL.virus.burstFractionConsumed));
-    region.pathogen.viralLoad = Math.max(0, region.pathogen.viralLoad - consumed);
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
+    const hex = state.hexes[hexId];
+    const def = REGIONS[hex.regionId];
+    const consumed = Math.max(1, Math.round(hex.pathogen.viralLoad * BAL.virus.burstFractionConsumed));
+    hex.pathogen.viralLoad = Math.max(0, hex.pathogen.viralLoad - consumed);
     v.totalViralLoad = Math.max(0, v.totalViralLoad - consumed);
     const virionGain = BAL.virus.burstVirionGain + lvl('rapidReplication') * 2;
     v.virions += virionGain;
-    region.health = clampHealth(region.health - BAL.virus.burstSelfDamage);
-    gainDetection(state, regionId, BAL.virus.burstDetectionSpike, 'virus');
+    hex.health = clampHealth(hex.health - BAL.virus.burstSelfDamage);
+    gainDetection(state, hexId, BAL.virus.burstDetectionSpike, 'virus');
     addLog(state, 'virus', '💥', `Viral burst in ${def.name}! +${virionGain} virions, but tissue damaged and immune attention rises.`);
     return { ok: true };
   }
 
   if (actionId === 'latency') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
-    state.regions[regionId].pathogen.latent = true;
-    addLog(state, 'virus', '💤', `Infection in ${REGIONS[regionId].name} goes latent, hiding from the immune system.`);
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
+    state.hexes[hexId].pathogen.latent = true;
+    addLog(state, 'virus', '💤', `Infection in ${REGIONS[state.hexes[hexId].regionId].name} goes latent, hiding from the immune system.`);
     return { ok: true };
   }
 
   if (actionId === 'evade') {
-    if (!regionId) return { ok: false, message: 'Select a region.' };
+    if (!hexId) return { ok: false, message: 'Select a hex.' };
     if (!spendVirions(state, BAL.virus.evadeVirionCost)) return { ok: false, message: 'Not enough virions.' };
-    reduceDetection(state, regionId, BAL.virus.evadeDetectionReduction + lvl('immuneEvasionV') * 5);
-    addLog(state, 'virus', '🫥', `Virus in ${REGIONS[regionId].name} evades antibody detection.`);
+    reduceDetection(state, hexId, BAL.virus.evadeDetectionReduction + lvl('immuneEvasionV') * 5);
+    addLog(state, 'virus', '🫥', `Virus in ${REGIONS[state.hexes[hexId].regionId].name} evades antibody detection.`);
     return { ok: true };
   }
 

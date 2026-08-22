@@ -1,14 +1,24 @@
 import { getCatalog, getValidTargets, executeAction } from './actions';
 import { adaptationsFor } from './adaptations';
 import { buyAdaptation } from './adaptationSystem';
+import { BAL } from './balance';
 import { REGIONS } from './regions';
-import type { FactionId, GameState, RegionId } from './types';
+import type { FactionId, GameState, HexId } from './types';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
+// Reward filling a fragile hex up to a safe floor, but penalize piling more
+// onto one that's already near its cap — pushes growth actions to taper off
+// in favor of spreading once a tile is saturated.
+function growthCurve(current: number, cap: number): number {
+  if (current < 6) return 6 - current;
+  if (current >= cap - 3) return -(current - (cap - 3)) * 2;
+  return 0;
+}
+
 interface Candidate {
   actionId: string;
-  regionId: RegionId | null;
+  hexId: HexId | null;
   score: number;
 }
 
@@ -18,65 +28,71 @@ function noiseFor(difficulty: Difficulty): number {
   return 0.5;
 }
 
-function scoreBacteria(state: GameState, actionId: string, regionId: RegionId | null): number {
+function scoreBacteria(state: GameState, actionId: string, hexId: HexId | null): number {
   const b = state.bacteria;
-  const region = regionId ? state.regions[regionId] : null;
-  const def = regionId ? REGIONS[regionId] : null;
+  const hex = hexId ? state.hexes[hexId] : null;
+  const def = hex ? REGIONS[hex.regionId] : null;
   switch (actionId) {
     case 'reproduce':
-      return 4 + (def?.traits.bacteriaGrowthBonus ?? 0) - (region ? region.pathogen.detection / 25 : 0);
+      return (
+        4 +
+        (def?.traits.bacteriaGrowthBonus ?? 0) -
+        (hex ? hex.pathogen.detection / 25 : 0) +
+        (hex ? growthCurve(hex.pathogen.colonyStrength, BAL.bacteria.hexCap) : 0)
+      );
     case 'spread':
       return (
-        6 +
+        5 +
         (def?.traits.bacteriaGrowthBonus ?? 0) -
-        (region ? region.microbiome / 20 : 0) -
+        (hex ? hex.microbiome / 20 : 0) -
         (def?.traits.bloodBrainBarrier ? 3 : 0)
       );
     case 'biofilm':
-      return 3 + (region ? region.pathogen.detection / 15 + region.pathogen.colonyStrength / 12 : 0);
+      return 5.5 + (hex ? hex.pathogen.detection / 12 + hex.pathogen.colonyStrength / 10 : 0);
     case 'toxin':
-      return 2 + (region && region.pathogen.colonyStrength > 8 ? 2 : 0);
+      return 2 + (hex && hex.pathogen.colonyStrength > 8 ? 2 : 0);
     case 'resistance':
       return 2 + (state.immune.detectionBacteria > 35 ? 4 : 0) + (b.resistance < 30 ? 2 : 0);
     case 'hide':
-      return 1 + (region ? region.pathogen.detection / 18 : 0);
+      return 1 + (hex ? hex.pathogen.detection / 18 : 0);
     default:
       return 0;
   }
 }
 
-function scoreVirus(state: GameState, actionId: string, regionId: RegionId | null): number {
-  const region = regionId ? state.regions[regionId] : null;
-  const def = regionId ? REGIONS[regionId] : null;
+function scoreVirus(state: GameState, actionId: string, hexId: HexId | null): number {
+  const hex = hexId ? state.hexes[hexId] : null;
+  const def = hex ? REGIONS[hex.regionId] : null;
   switch (actionId) {
     case 'infect':
       return (
-        7 +
+        6 +
         (def?.traits.virusReplicationBonus ?? 0) -
-        (region ? region.pathogen.detection / 15 : 0) -
-        (region?.pathogen.quarantined ? 3 : 0) -
+        (hex ? hex.pathogen.detection / 15 : 0) -
+        (hex?.pathogen.quarantined ? 3 : 0) -
         (def?.traits.bloodBrainBarrier ? 3 : 0)
       );
     case 'replicate':
-      return 6 + (def?.traits.virusReplicationBonus ?? 0) + (region ? region.pathogen.viralLoad / 15 : 0);
-    case 'burst':
       return (
-        3 +
-        (state.immune.adaptiveVsVirus ? 5 : 0) +
-        (region && region.pathogen.detection > 65 ? 4 : 0)
+        6 +
+        (def?.traits.virusReplicationBonus ?? 0) +
+        (hex ? hex.pathogen.viralLoad / 15 : 0) +
+        (hex ? growthCurve(hex.pathogen.viralLoad, BAL.virus.hexCap) : 0)
       );
+    case 'burst':
+      return 3 + (state.immune.adaptiveVsVirus ? 5 : 0) + (hex && hex.pathogen.detection > 65 ? 4 : 0);
     case 'latency':
-      return region && region.pathogen.detection > 70 && state.immune.adaptiveVsVirus ? 6 : 1;
+      return hex && hex.pathogen.detection > 40 ? 6 : 1;
     case 'evade':
-      return 1 + (region ? region.pathogen.detection / 15 : 0);
+      return 1 + (hex ? hex.pathogen.detection / 15 : 0);
     default:
       return 0;
   }
 }
 
-function scoreImmune(state: GameState, actionId: string, regionId: RegionId | null): number {
-  const region = regionId ? state.regions[regionId] : null;
-  const pathogenStrength = region ? region.pathogen.colonyStrength + region.pathogen.viralLoad : 0;
+function scoreImmune(state: GameState, actionId: string, hexId: HexId | null): number {
+  const hex = hexId ? state.hexes[hexId] : null;
+  const pathogenStrength = hex ? hex.pathogen.colonyStrength + hex.pathogen.viralLoad : 0;
   switch (actionId) {
     case 'neutrophils':
       return 4 + pathogenStrength / 10;
@@ -93,16 +109,16 @@ function scoreImmune(state: GameState, actionId: string, regionId: RegionId | nu
     case 'antibodies':
       return state.immune.adaptiveVsBacteria || state.immune.adaptiveVsVirus ? 7 : -1;
     case 'quarantine':
-      return region && !region.pathogen.quarantined ? 4 + pathogenStrength / 12 : -1;
+      return hex && !hex.pathogen.quarantined ? 4 + pathogenStrength / 12 : -1;
     default:
       return 0;
   }
 }
 
-function scoreFor(state: GameState, faction: FactionId, actionId: string, regionId: RegionId | null): number {
-  if (faction === 'bacteria') return scoreBacteria(state, actionId, regionId);
-  if (faction === 'virus') return scoreVirus(state, actionId, regionId);
-  return scoreImmune(state, actionId, regionId);
+function scoreFor(state: GameState, faction: FactionId, actionId: string, hexId: HexId | null): number {
+  if (faction === 'bacteria') return scoreBacteria(state, actionId, hexId);
+  if (faction === 'virus') return scoreVirus(state, actionId, hexId);
+  return scoreImmune(state, actionId, hexId);
 }
 
 const ADAPTATION_PRIORITY: Record<FactionId, string[]> = {
@@ -143,6 +159,10 @@ function tryBuyAdaptation(state: GameState, faction: FactionId): boolean {
   return false;
 }
 
+// Cap how many hex targets are scored per action so a 166-tile board with
+// dozens of infected hexes still evaluates quickly and deterministically.
+const MAX_CANDIDATES_PER_ACTION = 24;
+
 export function runAiTurn(state: GameState, faction: FactionId, difficulty: Difficulty) {
   const noise = noiseFor(difficulty);
   let guard = 0;
@@ -156,12 +176,15 @@ export function runAiTurn(state: GameState, faction: FactionId, difficulty: Diff
         if (!ok) continue;
       }
       if (action.needsTarget) {
-        const targets = getValidTargets(state, faction, action.id);
-        for (const regionId of targets) {
-          candidates.push({ actionId: action.id, regionId, score: scoreFor(state, faction, action.id, regionId) });
+        let targets = getValidTargets(state, faction, action.id);
+        if (targets.length > MAX_CANDIDATES_PER_ACTION) {
+          targets = [...targets].sort(() => Math.random() - 0.5).slice(0, MAX_CANDIDATES_PER_ACTION);
+        }
+        for (const hexId of targets) {
+          candidates.push({ actionId: action.id, hexId, score: scoreFor(state, faction, action.id, hexId) });
         }
       } else {
-        candidates.push({ actionId: action.id, regionId: null, score: scoreFor(state, faction, action.id, null) });
+        candidates.push({ actionId: action.id, hexId: null, score: scoreFor(state, faction, action.id, null) });
       }
     }
     if (candidates.length === 0) break;
@@ -169,7 +192,7 @@ export function runAiTurn(state: GameState, faction: FactionId, difficulty: Diff
     candidates.sort((a, b) => b.score - a.score);
     const best = candidates[0];
     if (best.score < 0 && difficulty !== 'easy') break;
-    const result = executeAction(state, faction, best.actionId, best.regionId);
+    const result = executeAction(state, faction, best.actionId, best.hexId);
     if (!result.ok) break;
   }
 

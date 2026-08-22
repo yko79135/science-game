@@ -1,5 +1,6 @@
 import { BAL } from './balance';
-import { MAJOR_ORGANS, REGION_ORDER } from './regions';
+import { MAJOR_ORGANS } from './regions';
+import { aggregateRegion, countHexesControlled, distinctRegionsControlled, recomputeTotals } from './aggregate';
 import type { FactionId, GameState } from './types';
 import { addLog } from './log';
 
@@ -10,6 +11,8 @@ function hasFaction(state: GameState, f: FactionId): boolean {
 export function checkVictory(state: GameState): boolean {
   if (state.winner) return true;
 
+  recomputeTotals(state);
+
   if (state.bodyHealth <= 0) {
     state.winner = 'draw';
     state.endReason = 'hostFailure';
@@ -19,11 +22,10 @@ export function checkVictory(state: GameState): boolean {
   }
 
   if (hasFaction(state, 'bacteria')) {
-    const infectedMajorOrgans = MAJOR_ORGANS.filter((id) => state.regions[id].pathogen.colonyStrength > 0).length;
-    if (
-      state.bacteria.totalColonyStrength >= BAL.bacteria.victoryColonyStrength &&
-      infectedMajorOrgans >= BAL.bacteria.victoryMajorOrgans
-    ) {
+    const hexesControlled = countHexesControlled(state, 'bacteria');
+    state.stats.peakHexesControlled.bacteria = Math.max(state.stats.peakHexesControlled.bacteria, hexesControlled);
+    const infectedMajorOrgans = MAJOR_ORGANS.filter((id) => aggregateRegion(state, id).hexesWithColony > 0).length;
+    if (hexesControlled >= BAL.bacteria.victoryHexesControlled && infectedMajorOrgans >= BAL.bacteria.victoryMajorOrgans) {
       state.winner = 'bacteria';
       state.endReason = 'bacteriaSystemic';
       addLog(state, 'system', '🏆', 'BACTERIA VICTORY — systemic infection established across major organs.');
@@ -33,8 +35,10 @@ export function checkVictory(state: GameState): boolean {
   }
 
   if (hasFaction(state, 'virus')) {
-    const infectedRegions = REGION_ORDER.filter((id) => state.regions[id].pathogen.viralLoad > 0).length;
-    if (state.virus.totalViralLoad >= BAL.virus.victoryViralLoad && infectedRegions >= BAL.virus.victoryRegions) {
+    const hexesControlled = countHexesControlled(state, 'virus');
+    state.stats.peakHexesControlled.virus = Math.max(state.stats.peakHexesControlled.virus, hexesControlled);
+    const infectedRegions = distinctRegionsControlled(state, 'virus');
+    if (hexesControlled >= BAL.virus.victoryHexesControlled && infectedRegions >= BAL.virus.victoryRegions) {
       state.winner = 'virus';
       state.endReason = 'viralOutbreak';
       addLog(state, 'system', '🏆', 'VIRUS VICTORY — viral load has overwhelmed the body\'s defenses.');

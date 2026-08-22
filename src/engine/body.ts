@@ -1,8 +1,9 @@
 import { BAL } from './balance';
-import { REGION_ORDER, REGIONS } from './regions';
+import { REGIONS } from './regions';
 import type { GameState } from './types';
 import { addLog, clampHealth } from './log';
 import { recomputeBodyHealth } from './bodyHealth';
+import { recomputeTotals } from './aggregate';
 import { checkAdaptiveUnlock, gainDetection } from './detection';
 import { rollRandomEvent } from './events';
 
@@ -13,48 +14,48 @@ function hasFaction(state: GameState, f: 'bacteria' | 'virus'): boolean {
 export function runBodyPhase(state: GameState) {
   addLog(state, 'system', '📅', `— Round ${state.round} begins —`);
 
-  for (const id of REGION_ORDER) {
-    const region = state.regions[id];
-    const def = REGIONS[id];
-    const infected = region.pathogen.colonyStrength > 0 || region.pathogen.viralLoad > 0;
+  for (const id in state.hexes) {
+    const hex = state.hexes[id];
+    const def = REGIONS[hex.regionId];
+    const infected = hex.pathogen.colonyStrength > 0 || hex.pathogen.viralLoad > 0;
 
     const feverPenalty = state.immune.fever > 37 ? (state.immune.fever - 37) * 0.35 : 0;
     const highConsequence = def.traits.highConsequence ?? 1;
     if (feverPenalty > 0) {
-      region.health = clampHealth(region.health - feverPenalty * (highConsequence > 1.3 ? 1.4 : 0.7));
+      hex.health = clampHealth(hex.health - feverPenalty * (highConsequence > 1.3 ? 1.4 : 0.7));
     }
 
-    if (region.pathogen.colonyStrength > 0) {
-      const dmg = Math.min(6, region.pathogen.colonyStrength * 0.12) * highConsequence;
-      region.health = clampHealth(region.health - dmg);
+    if (hex.pathogen.colonyStrength > 0) {
+      const dmg = Math.min(6, hex.pathogen.colonyStrength * 0.12) * highConsequence;
+      hex.health = clampHealth(hex.health - dmg);
     }
-    if (region.pathogen.viralLoad > 0 && !region.pathogen.latent) {
-      const dmg = Math.min(7, region.pathogen.viralLoad * 0.16) * highConsequence;
-      region.health = clampHealth(region.health - dmg);
+    if (hex.pathogen.viralLoad > 0 && !hex.pathogen.latent) {
+      const dmg = Math.min(7, hex.pathogen.viralLoad * 0.16) * highConsequence;
+      hex.health = clampHealth(hex.health - dmg);
     }
 
     if (def.traits.microbiome !== undefined) {
-      if (region.pathogen.colonyStrength > 0) {
-        region.microbiome = Math.max(0, region.microbiome - region.pathogen.colonyStrength * 0.3);
+      if (hex.pathogen.colonyStrength > 0) {
+        hex.microbiome = Math.max(0, hex.microbiome - hex.pathogen.colonyStrength * 0.3);
       } else {
-        region.microbiome = Math.min(def.traits.microbiome, region.microbiome + BAL.microbiomeRegenPerRound);
+        hex.microbiome = Math.min(def.traits.microbiome, hex.microbiome + BAL.microbiomeRegenPerRound);
       }
     }
 
     if (!infected) {
-      region.health = clampHealth(region.health + BAL.regionRegenPerRound);
+      hex.health = clampHealth(hex.health + BAL.hexRegenPerRound);
     }
 
-    region.pathogen.inflammation = Math.max(0, region.pathogen.inflammation - 8);
-    if (region.pathogen.quarantined && Math.random() < BAL.immune.quarantineDecay) {
-      region.pathogen.quarantined = false;
+    hex.pathogen.inflammation = Math.max(0, hex.pathogen.inflammation - 8);
+    if (hex.pathogen.quarantined && Math.random() < BAL.immune.quarantineDecay) {
+      hex.pathogen.quarantined = false;
     }
 
-    if (region.pathogen.colonyStrength > 0) {
+    if (hex.pathogen.colonyStrength > 0) {
       const evasion = state.bacteria.adaptations.immuneEvasion ?? 0;
       gainDetection(state, id, BAL.immune.detectionPassiveGain * Math.max(0.2, 1 - evasion * 0.3), 'bacteria');
     }
-    if (region.pathogen.viralLoad > 0 && !region.pathogen.latent) {
+    if (hex.pathogen.viralLoad > 0 && !hex.pathogen.latent) {
       const evasion = state.virus.adaptations.immuneEvasionV ?? 0;
       gainDetection(state, id, BAL.immune.detectionPassiveGain * Math.max(0.2, 1 - evasion * 0.3), 'virus');
     }
@@ -64,6 +65,8 @@ export function runBodyPhase(state: GameState) {
 
   if (hasFaction(state, 'bacteria')) checkAdaptiveUnlock(state, 'bacteria');
   if (hasFaction(state, 'virus')) checkAdaptiveUnlock(state, 'virus');
+
+  recomputeTotals(state);
 
   const passiveBiomass = Math.round(state.bacteria.totalColonyStrength * BAL.bacteria.passiveBiomassPerColony) + 2;
   state.bacteria.biomass += passiveBiomass;
@@ -75,8 +78,8 @@ export function runBodyPhase(state: GameState) {
 
   if (state.immune.globalInflammation >= BAL.cytokineStormThreshold) {
     state.stats.cytokineStorms += 1;
-    for (const id of REGION_ORDER) {
-      state.regions[id].health = clampHealth(state.regions[id].health - BAL.cytokineStormBodyDamage / REGION_ORDER.length * 3);
+    for (const id in state.hexes) {
+      state.hexes[id].health = clampHealth(state.hexes[id].health - BAL.cytokineStormBodyDamage);
     }
     state.immune.immunePoints = Math.max(0, state.immune.immunePoints - 6);
     state.immune.globalInflammation = Math.max(0, state.immune.globalInflammation - 30);
@@ -90,6 +93,7 @@ export function runBodyPhase(state: GameState) {
 
   recomputeBodyHealth(state);
   rollRandomEvent(state);
+  recomputeTotals(state);
   recomputeBodyHealth(state);
 
   state.stats.peakColonyStrength = Math.max(state.stats.peakColonyStrength, state.bacteria.totalColonyStrength);

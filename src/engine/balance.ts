@@ -19,7 +19,8 @@ export const BAL = {
     hideBiomassCost: 2,
     hideDetectionReduction: 10,
     passiveBiomassPerColony: 0.35,
-    victoryColonyStrength: 20,
+    hexCap: 12,
+    victoryHexesControlled: 20,
     victoryMajorOrgans: 3,
   },
 
@@ -38,7 +39,8 @@ export const BAL = {
     latencyApCost: 2,
     evadeVirionCost: 3,
     evadeDetectionReduction: 10,
-    victoryViralLoad: 25,
+    hexCap: 12,
+    victoryHexesControlled: 18,
     victoryRegions: 4,
   },
 
@@ -74,6 +76,6 @@ export const BAL = {
   cytokineStormThreshold: 65,
   cytokineStormBodyDamage: 12,
 
-  regionRegenPerRound: 2,
+  hexRegenPerRound: 2,
   microbiomeRegenPerRound: 1,
 };

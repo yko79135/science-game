@@ -1,6 +1,8 @@
 import type { GameState } from './types';
 import { addLog, clampHealth } from './log';
 import { applyAntibiotic, applyAntiviral, applyFeverReducer } from './medicine';
+import { regionHexIds } from './aggregate';
+import { capitalHexesOf } from './hexGrid';
 
 interface EventDef {
   id: string;
@@ -36,7 +38,9 @@ const EVENTS: EventDef[] = [
     name: 'Dehydration',
     weight: () => 2,
     apply: (state) => {
-      state.regions.kidneys.health = clampHealth(state.regions.kidneys.health - 6);
+      for (const id of regionHexIds('kidneys')) {
+        state.hexes[id].health = clampHealth(state.hexes[id].health - 6);
+      }
       addLog(state, 'event', '💧', 'DEHYDRATION — kidney effectiveness reduced.');
     },
   },
@@ -54,16 +58,23 @@ const EVENTS: EventDef[] = [
     name: 'Balanced Meal',
     weight: () => 2,
     apply: (state) => {
-      state.regions.intestines.microbiome = Math.min(100, state.regions.intestines.microbiome + 10);
+      for (const id of regionHexIds('intestines')) {
+        state.hexes[id].microbiome = Math.min(100, state.hexes[id].microbiome + 10);
+      }
       addLog(state, 'event', '🥗', 'BALANCED MEAL — the gut microbiome gets a boost.');
     },
   },
   {
     id: 'skinWound',
     name: 'Skin Wound',
-    weight: (state) => (hasFaction(state, 'bacteria') && state.regions.skin.pathogen.colonyStrength === 0 ? 2 : 0),
+    weight: (state) =>
+      hasFaction(state, 'bacteria') && regionHexIds('skin').some((id) => state.hexes[id].pathogen.colonyStrength === 0) ? 2 : 0,
     apply: (state) => {
-      state.regions.skin.pathogen.colonyStrength = 2;
+      const unclaimed = regionHexIds('skin').filter((id) => state.hexes[id].pathogen.colonyStrength === 0);
+      const capitals = capitalHexesOf('skin').filter((id) => unclaimed.includes(id));
+      const target = capitals[0] ?? unclaimed[0];
+      if (!target) return;
+      state.hexes[target].pathogen.colonyStrength = 2;
       state.bacteria.totalColonyStrength += 2;
       state.stats.regionsEverInfected.add('skin');
       addLog(state, 'event', '🩹', 'SKIN WOUND — bacteria gain a new entry point at the skin.');

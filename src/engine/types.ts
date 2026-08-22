@@ -17,13 +17,12 @@ export type RegionId =
   | 'spleen'
   | 'brain';
 
+export type HexId = string;
+
 export interface RegionDef {
   id: RegionId;
   name: string;
   icon: string;
-  x: number; // percent position on map
-  y: number;
-  connections: RegionId[];
   description: string;
   traits: {
     virusReplicationBonus?: number; // + to replicate/infect rolls
@@ -50,25 +49,26 @@ export interface AdaptationDef {
   maxLevel?: number;
 }
 
-export interface RegionPathogenState {
+export interface PathogenState {
   // Bacteria presence
-  colonyStrength: number; // 0+ population/strength in this region
+  colonyStrength: number; // 0+ population/strength on this hex
   biofilm: boolean;
   // Virus presence
-  viralLoad: number; // 0+ infected cell / virion strength in this region
+  viralLoad: number; // 0+ infected cell / virion strength on this hex
   latent: boolean;
   // Immune presence / detection
-  detection: number; // 0-100, per-region accumulated intel
+  detection: number; // 0-100, per-hex accumulated intel
   inflammation: number; // 0-100 local inflammation
   quarantined: boolean;
   antibodiesPresent: boolean;
 }
 
-export interface RegionState {
-  id: RegionId;
+export interface HexState {
+  id: HexId;
+  regionId: RegionId;
   health: number; // 0-100
   microbiome: number; // 0-100 current beneficial bacteria strength
-  pathogen: RegionPathogenState;
+  pathogen: PathogenState;
 }
 
 export interface BacteriaState {
@@ -168,7 +168,7 @@ export interface GameState {
   settings: GameSettings;
   round: number;
   phase: GamePhase;
-  regions: Record<RegionId, RegionState>;
+  hexes: Record<HexId, HexState>;
   bacteria: BacteriaState;
   virus: VirusState;
   immune: ImmuneState;
@@ -181,6 +181,7 @@ export interface GameState {
   stats: {
     peakViralLoad: number;
     peakColonyStrength: number;
+    peakHexesControlled: { bacteria: number; virus: number };
     regionsEverInfected: Set<RegionId>;
     adaptiveActivatedRound: { bacteria?: number; virus?: number };
     antibodiesProduced: number;
@@ -189,6 +190,5 @@ export interface GameState {
     startRound: number;
     transmissionBonus: number;
   };
-  selectedRegion: RegionId | null;
-  pendingEnd: boolean;
+  selectedHex: HexId | null;
 }

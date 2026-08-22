@@ -1,4 +1,4 @@
-import type { FactionId, GameState, RegionId } from './types';
+import type { FactionId, GameState, HexId } from './types';
 
 export interface ActionDef {
   id: string;
@@ -19,6 +19,6 @@ export interface ActionOutcome {
 
 export interface FactionActionModule {
   catalog: ActionDef[];
-  getValidTargets: (state: GameState, actionId: string) => RegionId[];
-  execute: (state: GameState, actionId: string, regionId: RegionId | null) => ActionOutcome;
+  getValidTargets: (state: GameState, actionId: string) => HexId[];
+  execute: (state: GameState, actionId: string, hexId: HexId | null) => ActionOutcome;
 }
